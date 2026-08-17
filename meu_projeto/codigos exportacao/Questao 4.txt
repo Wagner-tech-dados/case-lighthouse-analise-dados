@@ -1,0 +1,185 @@
+CREATE TEMP TABLE metricas_cliente AS 
+
+SELECT 
+
+customer_id, 
+
+ 
+
+-- Soma tudo que o cliente gastou 
+
+SUM(total) AS faturamento_total, 
+
+ 
+
+-- Conta quantos pedidos (transações) o cliente fez 
+
+COUNT(id) AS frequencia, 
+
+ 
+
+-- Ticket médio = faturamento dividido pela quantidade de pedidos 
+
+-- O "* 1.0" garante que o resultado tenha casas decimais 
+
+SUM(total) * 1.0 / COUNT(id) AS ticket_medio 
+
+ 
+
+FROM orders 
+
+WHERE total IS NOT NULL 
+
+GROUP BY customer_id; 
+
+ 
+
+CREATE TEMP TABLE categorias_cliente AS 
+
+SELECT 
+
+o.customer_id, 
+
+ 
+
+-- Conta as categorias diferentes, sem repetir 
+
+COUNT(DISTINCT p.category_id) AS diversidade_categorias 
+
+ 
+
+FROM orders AS o 
+
+JOIN order_items AS oi ON oi.order_id = o.id 
+
+JOIN product_variants AS pv ON pv.id = oi.product_variant_id 
+
+JOIN products AS p ON p.id = pv.product_id 
+
+ 
+
+GROUP BY o.customer_id; 
+
+ 
+
+--------------------------------------------------------------------------------------------- 
+
+-- Juntar tudo, aplicar o filtro e pegar os 10 melhores 
+
+--------------------------------------------------------------------------------------------- 
+
+CREATE TEMP TABLE clientes_elite AS 
+
+SELECT 
+
+m.customer_id, 
+
+m.faturamento_total, 
+
+m.frequencia, 
+
+m.ticket_medio, 
+
+c.diversidade_categorias 
+
+ 
+
+FROM metricas_cliente AS m 
+
+JOIN categorias_cliente AS c ON c.customer_id = m.customer_id 
+
+ 
+
+-- Regra de elite: só entram clientes com 13 categorias ou mais 
+
+WHERE c.diversidade_categorias >= 13 
+
+ 
+
+--------------------------------------------------------------------------------------------- 
+
+-- Ordena do maior ticket médio para o menor 
+
+--------------------------------------------------------------------------------------------- 
+
+-- Em caso de empate, o cliente com menor customer_id vem primeiro 
+
+--------------------------------------------------------------------------------------------- 
+
+ORDER BY 
+
+m.ticket_medio DESC, 
+
+m.customer_id ASC 
+
+ 
+
+-- Pega apenas os 10 primeiros 
+
+LIMIT 10; 
+
+ 
+
+--------------------------------------------------------------------------------------------- 
+
+-- Ver o ranking final dos 10 clientes 
+
+--------------------------------------------------------------------------------------------- 
+
+SELECT 
+
+customer_id, 
+
+ROUND(faturamento_total, 2) AS faturamento_total, 
+
+frequencia, 
+
+ROUND(ticket_medio, 2) AS ticket_medio, 
+
+diversidade_categorias 
+
+FROM clientes_elite 
+
+ORDER BY ticket_medio DESC; 
+
+ 
+
+--------------------------------------------------------------------------------------------- 
+
+-- Descobrir a categoria mais comprada por esses 10 clientes 
+
+--------------------------------------------------------------------------------------------- 
+
+SELECT 
+
+c.name AS categoria, 
+
+SUM(oi.quantity) AS total_itens_comprados 
+
+ 
+
+FROM order_items AS oi 
+
+JOIN orders AS o ON o.id = oi.order_id 
+
+JOIN product_variants AS pv ON pv.id = oi.product_variant_id 
+
+JOIN products AS p ON p.id = pv.product_id 
+
+JOIN categories AS c ON c.id = p.category_id 
+
+ 
+
+--------------------------------------------------------------------------------------------- 
+
+-- Filtra somente os pedidos feitos pelos 10 clientes de elite 
+
+--------------------------------------------------------------------------------------------- 
+
+WHERE o.customer_id IN (SELECT customer_id FROM clientes_elite) 
+
+GROUP BY c.name 
+
+ORDER BY total_itens_comprados DESC 
+
+LIMIT 1; 

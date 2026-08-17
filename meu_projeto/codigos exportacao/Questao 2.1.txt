@@ -1,0 +1,197 @@
+# ========================================================= 
+
+# Script para gerar um schema.sql a partir de CSVs 
+
+# ========================================================= 
+
+ 
+
+import csv   # biblioteca para ler arquivos CSV 
+
+import os    # biblioteca para trabalhar com pastas e arquivos 
+
+ 
+
+# ------------------------------------------------- 
+
+# Caminhos usados no script 
+
+# ------------------------------------------------- 
+
+ 
+
+# Pasta onde estão os arquivos CSV de origem 
+
+PASTA_CSV = r'C:\Users\Wpere\Downloads\meu_projeto\csv' 
+
+ 
+
+# Local onde o arquivo schema.sql será criado 
+
+ARQUIVO_SQL = r'C:\Users\Wpere\Downloads\meu_projeto\schema.sql' 
+
+ 
+
+ 
+
+# ------------------------------------------------- 
+
+# Abre o arquivo SQL de saída para escrita 
+
+# ------------------------------------------------- 
+
+ 
+
+with open(ARQUIVO_SQL, 'w', encoding='utf-8') as sql: 
+
+ 
+
+    # Lista todos os arquivos da pasta, em ordem alfabética 
+
+    arquivos_da_pasta = sorted(os.listdir(PASTA_CSV)) 
+
+ 
+
+    # Contador para saber quantas tabelas foram criadas 
+
+    total_tabelas = 0 
+
+ 
+
+    # ------------------------------------------------- 
+
+    # Percorre cada arquivo encontrado na pasta 
+
+    # ------------------------------------------------- 
+
+ 
+
+    for nome_arquivo in arquivos_da_pasta: 
+
+ 
+
+        # Processa apenas arquivos que terminam com .csv 
+
+        if nome_arquivo.lower().endswith('.csv'): 
+
+ 
+
+            # Monta o caminho completo do arquivo CSV 
+
+            caminho_csv = os.path.join(PASTA_CSV, nome_arquivo) 
+
+ 
+
+            # Usa o nome do arquivo (sem extensão) como nome da tabela 
+
+            nome_tabela = os.path.splitext(nome_arquivo)[0] 
+
+ 
+
+            # ------------------------------------------------- 
+
+            # Abre o arquivo CSV para leitura 
+
+            # ------------------------------------------------- 
+
+ 
+
+            with open( 
+
+                caminho_csv, 
+
+                mode='r', 
+
+                encoding='utf-8-sig', 
+
+                newline='' 
+
+            ) as arquivo_csv: 
+
+ 
+
+                # Cria o leitor de CSV 
+
+                leitor = csv.reader(arquivo_csv) 
+
+ 
+
+                # Lê a primeira linha do CSV, que contém os nomes das colunas 
+
+                colunas = next(leitor) 
+
+ 
+
+                # ------------------------------------------------- 
+
+                # Monta a definição de cada coluna como TEXT 
+
+                # ------------------------------------------------- 
+
+ 
+
+                definicoes_colunas = [] 
+
+ 
+
+                for nome_coluna in colunas: 
+
+                    definicoes_colunas.append(f'"{nome_coluna}" TEXT') 
+
+ 
+
+                # Junta todas as colunas separadas por vírgula 
+
+                texto_colunas = ',\n    '.join(definicoes_colunas) 
+
+ 
+
+                # ------------------------------------------------- 
+
+                # Monta o comando CREATE TABLE completo 
+
+                # ------------------------------------------------- 
+
+ 
+
+                comando_create_table = ( 
+
+                    f'CREATE TABLE "{nome_tabela}" (\n' 
+
+                    f'    {texto_colunas}\n' 
+
+                    f');\n\n' 
+
+                ) 
+
+ 
+
+                # Escreve o comando no arquivo schema.sql 
+
+                sql.write(comando_create_table) 
+
+ 
+
+                # Atualiza o contador de tabelas criadas 
+
+                total_tabelas += 1 
+
+ 
+
+ 
+
+# ------------------------------------------------- 
+
+# Mensagem final, exibida no terminal 
+
+# ------------------------------------------------- 
+
+ 
+
+print('Processo finalizado com sucesso.') 
+
+print(f'Arquivo gerado: {ARQUIVO_SQL}') 
+
+print(f'Total de tabelas criadas: {total_tabelas}') 
+
+ 
